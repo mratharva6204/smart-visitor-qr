@@ -27,11 +27,16 @@ function extractPassId(decodedText) {
   }
 
   try {
-    // QR contains URL with ?passId=...
+    // QR contains URL
     const url = new URL(decodedText);
-    const passId = url.searchParams.get("passId");
 
+    // Check query param: ?passId=...
+    const passId = url.searchParams.get("passId");
     if (passId) return passId;
+
+    // Check URL path: /pass/{passId}
+    const pathMatch = url.pathname.match(/\/pass\/([^/?]+)/);
+    if (pathMatch) return decodeURIComponent(pathMatch[1]);
   } catch (e) {
     // Not a URL
   }

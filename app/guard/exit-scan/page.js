@@ -25,9 +25,14 @@ function extractPassId(decodedText) {
 
   try {
     const url = new URL(decodedText);
-    const passId = url.searchParams.get("passId");
 
+    // Check query param: ?passId=...
+    const passId = url.searchParams.get("passId");
     if (passId) return passId;
+
+    // Check URL path: /pass/{passId}
+    const pathMatch = url.pathname.match(/\/pass\/([^/?]+)/);
+    if (pathMatch) return decodeURIComponent(pathMatch[1]);
   } catch (e) {}
 
   return decodedText.trim();

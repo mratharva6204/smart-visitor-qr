@@ -116,7 +116,7 @@ export default function NewPassPage() {
           usedAt: null,
         });
 
-        const qrDataUrl = await QRCode.toDataURL(newPassId, {
+        const qrDataUrl = await QRCode.toDataURL(passLink, {
           margin: 1,
           color: { dark: "#0B1F3A", light: "#FFFFFF" },
         });
