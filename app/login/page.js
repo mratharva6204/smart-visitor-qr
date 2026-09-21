@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../../lib/firebase";
+
+const ROLE_HOME = {
+  resident: "/resident/dashboard",
+  guard: "/guard/dashboard",
+  admin: "/admin/dashboard",
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,11 +25,41 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Look up this user's role right away — we don't rely on AuthContext's
+      // timing here because we need the answer *now*, to decide where to
+      // send them, rather than after this component may have unmounted.
+      const userDocRef = doc(db, "users", credential.user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        setError("This account has no role assigned. Contact your administrator.");
+        await signOut(auth);
+        setLoading(false);
+        return;
+      }
+
+      const { role, active } = userDocSnap.data();
+
+      if (active === false) {
+        setError("This account has been disabled. Contact your administrator.");
+        await signOut(auth);
+        setLoading(false);
+        return;
+      }
+
+      const destination = ROLE_HOME[role];
+      if (!destination) {
+        setError("Unrecognized account role. Contact your administrator.");
+        await signOut(auth);
+        setLoading(false);
+        return;
+      }
+
+      router.push(destination);
     } catch (err) {
       setError("Invalid email or password. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -52,7 +89,7 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white p-8 rounded-2xl shadow-[0_2px_20px_rgba(11,31,58,0.08)] border border-slate-100">
-          <p className="text-[var(--slate)] text-sm mb-6">Resident sign in</p>
+          <p className="text-[var(--slate)] text-sm mb-6">Sign in</p>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   query,
@@ -10,37 +9,32 @@ import {
   orderBy,
   onSnapshot,
 } from "firebase/firestore";
-import { auth, db } from "../../lib/firebase";
+import { db } from "../../../lib/firebase";
+import { useAuth } from "../../../lib/AuthContext";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        router.push("/login");
-        return;
-      }
+    if (!user) return;
 
-      const q = query(
-        collection(db, "Notifications"),
-        where("residentId", "==", currentUser.uid),
-        orderBy("createdAt", "desc")
-      );
+    const q = query(
+      collection(db, "Notifications"),
+      where("residentId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
 
-      const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setNotifications(items);
-        setLoading(false);
-      });
-
-      return () => unsubscribeSnapshot();
+    const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setNotifications(items);
+      setDataLoading(false);
     });
 
-    return () => unsubscribeAuth();
-  }, [router]);
+    return () => unsubscribeSnapshot();
+  }, [user]);
 
   return (
     <div className="min-h-screen relative">
@@ -52,7 +46,7 @@ export default function NotificationsPage() {
 
       <div className="relative z-10 p-6">
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push("/resident/dashboard")}
           className="text-sm text-white/70 mb-6 hover:text-white transition"
         >
           ← Back to Dashboard
@@ -62,7 +56,7 @@ export default function NotificationsPage() {
           Notifications
         </h1>
 
-        {loading ? (
+        {dataLoading ? (
           <p className="text-white/70 text-sm">Loading...</p>
         ) : notifications.length === 0 ? (
           <p className="text-white/70 text-sm">No notifications yet.</p>

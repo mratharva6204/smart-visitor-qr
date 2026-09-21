@@ -1,40 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { signOut } from "firebase/auth";
+import { auth } from "../../../lib/firebase";
+import { useAuth } from "../../../lib/AuthContext";
 
 export default function DashboardPage() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        router.push("/login");
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+  const { user, profile } = useAuth(); // RoleGuard (in layout.js) already
+                                        // guarantees we only render once
+                                        // user + role are confirmed valid.
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/login");
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
-        <p className="text-[var(--slate)] text-sm">Loading...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen relative">
@@ -60,7 +40,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-5">
             <button
-              onClick={() => router.push("/notifications")}
+              onClick={() => router.push("/resident/notifications")}
               className="text-sm text-white/70 hover:text-white transition"
             >
               Notifications
@@ -76,7 +56,10 @@ export default function DashboardPage() {
 
         <main className="p-6 max-w-3xl mx-auto">
           <p className="text-white/70 mb-6 text-sm">
-            Welcome, <span className="font-medium text-white">{user?.email}</span>
+            Welcome,{" "}
+            <span className="font-medium text-white">
+              {profile?.name || user?.email}
+            </span>
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -88,7 +71,7 @@ export default function DashboardPage() {
                 Create a secure QR pass for an upcoming visitor.
               </p>
               <button
-                onClick={() => router.push("/new-pass")}
+                onClick={() => router.push("/resident/new-pass")}
                 className="bg-[var(--navy)] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[var(--blue)] transition"
               >
                 + New Pass
@@ -103,7 +86,7 @@ export default function DashboardPage() {
                 View all past and upcoming visitor passes.
               </p>
               <button
-                onClick={() => router.push("/history")}
+                onClick={() => router.push("/resident/history")}
                 className="bg-slate-100 text-[var(--navy)] px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-200 transition"
               >
                 View History
