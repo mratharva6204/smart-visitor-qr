@@ -192,6 +192,16 @@ export default function EntryScanPage() {
         type: "ENTRY",
       });
 
+      // Send hardware command to open the gate
+      await addDoc(collection(db, "GateCommands"), {
+        command: "OPEN_GATE",
+        gateId: "MAIN_GATE",
+        passId: passId,
+        visitorName: passData.visitorName || "Visitor",
+        timestamp: serverTimestamp(),
+        status: "PENDING"
+      });
+
       setMessage(
         `✅ Entry Granted\n${passData.visitorName || "Visitor"}`
       );
