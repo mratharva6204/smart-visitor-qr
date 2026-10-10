@@ -18,15 +18,21 @@ export default function EntriesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Show the most recent 50 scanned passes (entries or exits)
-    const q = query(
-      collection(db, "VisitorPasses"),
-      orderBy("lastScannedAt", "desc"),
-      limit(50)
-    );
+    // Fetch all passes and sort in memory so older passes (without lastScannedAt) still show up
+    const q = query(collection(db, "VisitorPasses"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const items = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((d) => d.used === true || d.entryStatus === "ENTERED" || d.status === "COMPLETED")
+        .sort((a, b) => {
+          // Fallback through different timestamp fields to support old and new passes
+          const timeA = a.lastScannedAt?.toMillis() || a.exitAt?.toMillis() || a.entryAt?.toMillis() || a.usedAt?.toMillis() || 0;
+          const timeB = b.lastScannedAt?.toMillis() || b.exitAt?.toMillis() || b.entryAt?.toMillis() || b.usedAt?.toMillis() || 0;
+          return timeB - timeA;
+        })
+        .slice(0, 50);
+
       setEntries(items);
       setDataLoading(false);
     });
