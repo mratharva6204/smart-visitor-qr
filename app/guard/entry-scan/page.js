@@ -125,7 +125,7 @@ export default function EntryScanPage() {
     };
   }, []);
 
-  const verifyEntry = async (decodedText) => {
+  async function verifyEntry(decodedText) {
     try {
       const passId = extractPassId(decodedText);
 

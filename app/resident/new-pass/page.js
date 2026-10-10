@@ -315,7 +315,7 @@ export default function NewPassPage() {
               rel="noopener noreferrer"
               className="w-full mt-3 flex items-center justify-center gap-2 bg-[#25D366] text-white py-2.5 rounded-xl font-medium hover:opacity-90 transition"
             >
-              WhatsApp didn't open? Send manually
+              WhatsApp didn&apos;t open? Send manually
             </a>
 
             <button

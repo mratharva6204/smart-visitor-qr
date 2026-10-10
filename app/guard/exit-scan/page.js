@@ -118,7 +118,7 @@ export default function ExitScanPage() {
     };
   }, []);
 
-  const verifyExit = async (decodedText) => {
+  async function verifyExit(decodedText) {
     try {
       const passId = extractPassId(decodedText);
 
