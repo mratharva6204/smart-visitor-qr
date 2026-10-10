@@ -4,7 +4,7 @@ import RoleGuard from "../../components/RoleGuard";
 
 export default function ResidentLayout({ children }) {
   return (
-    <RoleGuard allowedRoles={["resident"]}>
+    <RoleGuard allowedRoles={["resident", "admin"]}>
       {children}
     </RoleGuard>
   );

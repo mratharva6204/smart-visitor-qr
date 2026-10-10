@@ -6,7 +6,7 @@ import Navbar from "../../components/Navbar";
 
 export default function GuardLayout({ children }) {
   return (
-    <RoleGuard allowedRoles={["guard"]}>
+    <RoleGuard allowedRoles={["guard", "admin"]}>
       <div className="flex min-h-screen bg-gray-100">
         <Sidebar />
 

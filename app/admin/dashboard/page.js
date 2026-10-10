@@ -15,9 +15,12 @@ export default function AdminDashboardPage() {
   };
 
   const cards = [
+    { title: "Risk Prediction", desc: "View frequent visitors, analytics, and security insights.", href: "/admin/analytics" },
+    { title: "Create Pass", desc: "Generate a new visitor QR pass.", href: "/resident/new-pass" },
+    { title: "Scan Entry", desc: "Scan a visitor QR code for entry.", href: "/guard/entry-scan" },
+    { title: "Scan Exit", desc: "Scan a visitor QR code for exit.", href: "/guard/exit-scan" },
+    { title: "Entry Logs", desc: "View historical entry and exit records.", href: "/guard/entries" },
     { title: "Manage Users", desc: "View and manage residents, guards, and admins.", href: "/admin/users" },
-    { title: "Analytics", desc: "Visitor and access trends across the community.", href: "/admin/analytics" },
-    { title: "Settings", desc: "Society-wide configuration.", href: "/admin/settings" },
   ];
 
   return (
