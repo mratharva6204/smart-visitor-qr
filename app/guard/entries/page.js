@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   collection,
   query,
-  where,
-  orderBy,
-  limit,
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
