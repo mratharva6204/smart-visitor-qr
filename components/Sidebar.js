@@ -23,8 +23,13 @@ export default function Sidebar() {
       icon: LayoutDashboard,
     },
     {
-      name: "Scan Visitor QR",
-      href: "/guard/scan",
+      name: "Entry Scanner",
+      href: "/guard/entry-scan",
+      icon: QrCode,
+    },
+    {
+      name: "Exit Scanner",
+      href: "/guard/exit-scan",
       icon: QrCode,
     },
     {
