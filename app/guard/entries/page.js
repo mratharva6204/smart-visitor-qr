@@ -18,11 +18,10 @@ export default function EntriesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Show the most recent 50 scanned/used passes, newest first.
+    // Show the most recent 50 scanned passes (entries or exits)
     const q = query(
       collection(db, "VisitorPasses"),
-      where("used", "==", true),
-      orderBy("usedAt", "desc"),
+      orderBy("lastScannedAt", "desc"),
       limit(50)
     );
 
@@ -58,22 +57,47 @@ export default function EntriesPage() {
         {dataLoading ? (
           <p className="text-white/70 text-sm">Loading...</p>
         ) : entries.length === 0 ? (
-          <p className="text-white/70 text-sm">No visitors have entered yet.</p>
+          <p className="text-white/70 text-sm">No visitor logs found yet.</p>
         ) : (
           <div className="space-y-3 max-w-lg">
             {entries.map((e) => (
               <div
                 key={e.id}
-                className="bg-white p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
+                className="bg-white p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex flex-col gap-1"
               >
-                <p className="font-medium text-[var(--navy)] text-sm">{e.visitorName}</p>
-                <p className="text-[var(--slate)] text-xs">{e.visitorMobile}</p>
-                <p className="text-slate-400 text-xs mt-1">
-                  Entered: {e.usedAt?.toDate().toLocaleString() || "—"}
-                </p>
-                {e.scannedByName && (
-                  <p className="text-slate-400 text-xs">Scanned by: {e.scannedByName}</p>
-                )}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold text-[var(--navy)] text-sm">{e.visitorName}</p>
+                    <p className="text-[var(--slate)] text-xs">{e.visitorMobile}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide ${
+                    e.status === 'COMPLETED' ? 'bg-gray-100 text-gray-500' : 
+                    e.entryStatus === 'ENTERED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {e.status === 'COMPLETED' ? 'EXITED' : e.entryStatus === 'ENTERED' ? 'INSIDE' : 'ACTIVE'}
+                  </span>
+                </div>
+                
+                <div className="mt-2 text-xs text-gray-500 bg-slate-50 p-2 rounded-lg space-y-1">
+                  <div className="flex justify-between">
+                    <span>Entry:</span>
+                    <span className="font-medium text-[var(--navy)]">
+                      {e.entryAt ? e.entryAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " (" + e.entryAt.toDate().toLocaleDateString() + ")" : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Exit:</span>
+                    <span className="font-medium text-[var(--navy)]">
+                      {e.exitAt ? e.exitAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " (" + e.exitAt.toDate().toLocaleDateString() + ")" : "—"}
+                    </span>
+                  </div>
+                  {e.visitDurationMinutes && (
+                    <div className="flex justify-between pt-1 mt-1 border-t border-slate-200">
+                      <span>Duration:</span>
+                      <span className="font-medium text-[var(--navy)]">{e.visitDurationMinutes} mins</span>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
