@@ -1,0 +1,4 @@
+# NEVER commit the Firebase admin key - it bypasses all security rules
+serviceAccountKey.json
+venv/
+__pycache__/

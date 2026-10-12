@@ -1,0 +1,17 @@
+# Makes the gate controller start automatically when the Pi boots,
+# and keeps it running even after you close your PuTTY window.
+[Unit]
+Description=AMW SecureX Gate Controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=athudada
+WorkingDirectory=/home/athudada/smart-visitor-qr/raspberry-pi
+ExecStart=/home/athudada/smart-visitor-qr/raspberry-pi/venv/bin/python gate_controller.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
