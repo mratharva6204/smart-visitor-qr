@@ -13,6 +13,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
+import { sendGateCommand } from "../../../lib/gateService";
 import { useRouter } from "next/navigation";
 
 function extractPassId(decodedText) {
@@ -125,14 +126,28 @@ export default function EntryScanPage() {
     };
   }, []);
 
+  // Shows the denial on screen AND tells the Raspberry Pi to flash the red LED.
+  // (Not awaited on purpose: the guard sees the result instantly.)
+  function denyAccess(screenMessage, reason, passId) {
+    setMessage(screenMessage);
+    setResultType("error");
+    processingRef.current = false;
+
+    sendGateCommand("ACCESS_DENIED", {
+      reason,
+      passId: passId || null,
+      direction: "ENTRY",
+    });
+  }
+
   async function verifyEntry(decodedText) {
+    let passId = null;
+
     try {
-      const passId = extractPassId(decodedText);
+      passId = extractPassId(decodedText);
 
       if (!passId) {
-        setMessage("Invalid QR code.");
-        setResultType("error");
-        processingRef.current = false;
+        denyAccess("Invalid QR code.", "Invalid QR code", null);
         return;
       }
 
@@ -145,9 +160,7 @@ export default function EntryScanPage() {
       const snapshot = await getDocs(passQuery);
 
       if (snapshot.empty) {
-        setMessage("Visitor pass not found.");
-        setResultType("error");
-        processingRef.current = false;
+        denyAccess("Visitor pass not found.", "Pass not found", passId);
         return;
       }
 
@@ -156,21 +169,23 @@ export default function EntryScanPage() {
 
       // Already entered
       if (passData.entryAt || passData.entryStatus === "ENTERED") {
-        setMessage("❌ Entry already recorded for this QR.");
-        setResultType("error");
-        processingRef.current = false;
+        denyAccess(
+          "❌ Entry already recorded for this QR.",
+          "Entry already recorded",
+          passId
+        );
         return;
       }
 
       // Pass must be active
       if (passData.status && passData.status !== "ACTIVE") {
-        setMessage(`❌ Pass is ${passData.status}. Entry denied.`);
-        setResultType("error");
-        processingRef.current = false;
+        denyAccess(
+          `❌ Pass is ${passData.status}. Entry denied.`,
+          `Pass is ${passData.status}`,
+          passId
+        );
         return;
       }
-
-      const now = new Date();
 
       // Update visitor pass
       await updateDoc(doc(db, "VisitorPasses", passDoc.id), {
@@ -192,18 +207,16 @@ export default function EntryScanPage() {
         type: "ENTRY",
       });
 
-      // Send hardware command to open the gate
-      await addDoc(collection(db, "GateCommands"), {
-        command: "OPEN_GATE",
-        gateId: "MAIN_GATE",
+      // Tell the Raspberry Pi to open the gate (green LED + servo)
+      const gateSignalSent = await sendGateCommand("OPEN_GATE", {
         passId: passId,
         visitorName: passData.visitorName || "Visitor",
-        timestamp: serverTimestamp(),
-        status: "PENDING"
+        direction: "ENTRY",
       });
 
       setMessage(
-        `✅ Entry Granted\n${passData.visitorName || "Visitor"}`
+        `✅ Entry Granted\n${passData.visitorName || "Visitor"}` +
+          (gateSignalSent ? "" : "\n\n⚠️ Gate signal could not be sent.")
       );
       setResultType("success");
 
@@ -213,14 +226,13 @@ export default function EntryScanPage() {
     } catch (error) {
       console.error("Entry verification error:", error);
 
-      setMessage(
-        `❌ Entry failed: ${error.message || "Database error"}`
+      denyAccess(
+        `❌ Entry failed: ${error.message || "Database error"}`,
+        "System error",
+        passId
       );
-      setResultType("error");
-
-      processingRef.current = false;
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#0B1F3A] text-white flex flex-col items-center px-4 py-8">
@@ -261,6 +273,15 @@ export default function EntryScanPage() {
         <div className="mt-3 text-sm text-white/50">
           📷 Scanner active
         </div>
+      )}
+
+      {resultType === "error" && (
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-6 px-5 py-2.5 rounded-xl bg-white text-[#0B1F3A] font-medium hover:bg-white/90 transition"
+        >
+          Scan Again
+        </button>
       )}
 
       <button

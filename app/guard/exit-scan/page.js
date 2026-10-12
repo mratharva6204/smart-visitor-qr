@@ -13,6 +13,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
+import { sendGateCommand } from "../../../lib/gateService";
 import { useRouter } from "next/navigation";
 
 function extractPassId(decodedText) {
@@ -118,14 +119,28 @@ export default function ExitScanPage() {
     };
   }, []);
 
+  // Shows the denial on screen AND tells the Raspberry Pi to flash the red LED.
+  // (Not awaited on purpose: the guard sees the result instantly.)
+  function denyAccess(screenMessage, reason, passId) {
+    setMessage(screenMessage);
+    setResultType("error");
+    processingRef.current = false;
+
+    sendGateCommand("ACCESS_DENIED", {
+      reason,
+      passId: passId || null,
+      direction: "EXIT",
+    });
+  }
+
   async function verifyExit(decodedText) {
+    let passId = null;
+
     try {
-      const passId = extractPassId(decodedText);
+      passId = extractPassId(decodedText);
 
       if (!passId) {
-        setMessage("Invalid QR code.");
-        setResultType("error");
-        processingRef.current = false;
+        denyAccess("Invalid QR code.", "Invalid QR code", null);
         return;
       }
 
@@ -137,9 +152,7 @@ export default function ExitScanPage() {
       const snapshot = await getDocs(passQuery);
 
       if (snapshot.empty) {
-        setMessage("Visitor pass not found.");
-        setResultType("error");
-        processingRef.current = false;
+        denyAccess("Visitor pass not found.", "Pass not found", passId);
         return;
       }
 
@@ -148,19 +161,21 @@ export default function ExitScanPage() {
 
       // Visitor must have entered first
       if (!passData.entryAt) {
-        setMessage(
-          "❌ Exit denied.\nThis visitor has not been recorded as entered."
+        denyAccess(
+          "❌ Exit denied.\nThis visitor has not been recorded as entered.",
+          "Visitor has not entered",
+          passId
         );
-        setResultType("error");
-        processingRef.current = false;
         return;
       }
 
       // Prevent second exit scan
       if (passData.exitAt || passData.exitStatus === "EXITED") {
-        setMessage("❌ Exit already recorded for this QR.");
-        setResultType("error");
-        processingRef.current = false;
+        denyAccess(
+          "❌ Exit already recorded for this QR.",
+          "Exit already recorded",
+          passId
+        );
         return;
       }
 
@@ -199,12 +214,19 @@ export default function ExitScanPage() {
         durationMinutes: durationMinutes,
       });
 
+      // Tell the Raspberry Pi to open the gate for the exiting visitor
+      const gateSignalSent = await sendGateCommand("OPEN_GATE", {
+        passId: passId,
+        visitorName: passData.visitorName || "Visitor",
+        direction: "EXIT",
+      });
+
       setMessage(
         `✅ Exit Recorded\n${passData.visitorName || "Visitor"}\n\nDuration: ${
           durationMinutes !== null
             ? `${durationMinutes} minutes`
             : "Calculating..."
-        }`
+        }` + (gateSignalSent ? "" : "\n\n⚠️ Gate signal could not be sent.")
       );
 
       setResultType("success");
@@ -215,15 +237,13 @@ export default function ExitScanPage() {
     } catch (error) {
       console.error("Exit verification error:", error);
 
-      setMessage(
-        `❌ Exit failed: ${error.message || "Database error"}`
+      denyAccess(
+        `❌ Exit failed: ${error.message || "Database error"}`,
+        "System error",
+        passId
       );
-
-      setResultType("error");
-
-      processingRef.current = false;
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#0B1F3A] text-white flex flex-col items-center px-4 py-8">
@@ -264,6 +284,15 @@ export default function ExitScanPage() {
         <div className="mt-3 text-sm text-white/50">
           📷 Scanner active
         </div>
+      )}
+
+      {resultType === "error" && (
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-6 px-5 py-2.5 rounded-xl bg-white text-[#0B1F3A] font-medium hover:bg-white/90 transition"
+        >
+          Scan Again
+        </button>
       )}
 
       <button
